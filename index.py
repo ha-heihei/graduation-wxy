@@ -21,6 +21,8 @@ import re
 import w8ay
 from w8ay import main
 
+from dbutil import DBUtil
+
 comp = re.compile(
     "((http|ftp|https)://)(([a-zA-Z0-9\._-]+\.[a-zA-Z]{2,6})|([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}))(:[0-9]{1,4})*(/[a-zA-Z0-9\&%_\./-~-]*)?")
 
@@ -33,6 +35,9 @@ class IndexWindow(QMainWindow, UI_Index):
     def __init__(self):
         super(IndexWindow, self).__init__()
         self.setupUi(self)
+
+        # sql注入数据库初始化
+        self.injectInit()
 
         self.tabWidget.setCurrentIndex(0)
         self.submit.clicked.connect(lambda: self.submitEvent())
@@ -271,11 +276,68 @@ class IndexWindow(QMainWindow, UI_Index):
             self.messageDialog("扫描未开启")
 
 
+    # 数据库初始化
+    def injectInit(self):
+        db=DBUtil(db="inject_test")
+        # createDatabaseSql="create database if not exists inject_test"
+        # db.update(createDatabaseSql,None)
+        createTableSql="create table if not exists user(" \
+                       "id char(32) primary key," \
+                       "user_name varchar(255)," \
+                       "user_pwd varchar(255)," \
+                       "gender varchar(255)," \
+                       "email varchar(255)," \
+                       "mobile varchar(255)," \
+                       "create_time datetime)"
+        db.update(createTableSql,None)
+        userInfo=(time.time(),"wxy","wxy","女","857269541@qq.com","15733230691",time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
+        initSql="insert into user(id,user_name,user_pwd,gender,email,mobile,create_time) values(" \
+                "%s,%s,%s,%s,%s,%s,%s)"
+        num=db.query("select count(*) num from user",None)[0]["num"]
+        if num<=0:
+            db.update(initSql,userInfo)
+            db.close()
+        tableData=[
+            ["查看表结构","select * from user where user_name='wxy' and user_pwd='';show columns from user;"],
+            ["免密登陆","select * from user where user_name='wxy' and user_pwd='' or 1=1; "],
+            ["删除表结构","select * from user where user_name='wxy' and user_pwd='';drop table user;"]
+        ]
+        self.apiModel = QStandardItemModel(len(tableData), 2)  # 创建 行和列 固定的 模板
+        self.apiModel.setHorizontalHeaderLabels(['注入名称', 'sql语句'])  # 设置每列标题
+        for row in range(len(tableData)):
+            for column in range(2):
+                item = QStandardItem(tableData[row][column])  # 创建模板内容
+                self.apiModel.setItem(row, column, item)  # 向模板里添加 item
+        self.apiTable.setModel(self.apiModel)  # 表格设置模板
+        self.apiTable.clicked.connect(self.apiTableEvent)
+        # 注入测试事件绑定
+        self.injectBtn.clicked.connect(self.injectEvent)
+
+    def apiTableEvent(self,index):
+        apiName = self.apiModel.item(index.row(), 0).text()
+        apiSql = self.apiModel.item(index.row(), 1).text()
+        self.injectApi.setText(apiName)
+        self.injectEdit.setText(apiSql)
+
+
     # 注入测试脚本
     def injectEvent(self):
-        pass
-    # TODO 完成sql注入脚本
-
+        injectSql=self.injectEdit.toPlainText()
+        # print(injectSql)
+        if len(injectSql)<=0:
+            self.messageDialog("未填写sql注入语句")
+            return
+        db=DBUtil(db="inject_test",exFlag=True)
+        try:
+            if self.injectApi.text()!="免密登陆":
+                injectSql=injectSql.split(";")[1]
+            rs=db.query(injectSql,None)
+            print(rs)
+            self.injectConsole.setText(str(rs))
+        except Exception as e :
+            self.injectConsole.setText(str(e))
+        finally:
+            db.close()
 
 
 

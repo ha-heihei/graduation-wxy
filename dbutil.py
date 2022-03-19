@@ -2,8 +2,9 @@ import pymysql
 
 
 class DBUtil:
-    def __init__(self):
-        self.conn = pymysql.connect(host="localhost", port=3306, db="wxy", user="root", passwd="root")
+    def __init__(self,db="wxy",exFlag=False):
+        self.conn = pymysql.connect(host="localhost", port=3306, db=db, user="root", passwd="root")
+        self.exFlag=exFlag
 
     def update(self, sql, values):
         cur = self.conn.cursor()
@@ -11,7 +12,9 @@ class DBUtil:
             cur.execute(sql, values)
             self.conn.commit()
             return True
-        except:
+        except Exception as e:
+            if self.exFlag:
+                return e
             return False
         finally:
             cur.close()
@@ -21,7 +24,9 @@ class DBUtil:
         try:
             cur.execute(sql, values)
             return cur.fetchall()
-        except:
+        except Exception as e:
+            if self.exFlag:
+                return e
             return None
         finally:
             cur.close()

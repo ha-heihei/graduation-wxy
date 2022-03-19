@@ -54,7 +54,7 @@
      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;注入测试&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
     </property>
     <property name="currentIndex">
-     <number>6</number>
+     <number>5</number>
     </property>
     <widget class="QWidget" name="widget">
      <attribute name="title">
@@ -691,7 +691,7 @@
      <attribute name="title">
       <string>注入测试</string>
      </attribute>
-     <widget class="QTableWidget" name="apiTable">
+     <widget class="QTableView" name="apiTable">
       <property name="geometry">
        <rect>
         <x>10</x>
